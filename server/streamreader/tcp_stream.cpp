@@ -31,6 +31,9 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+#include <netinet/tcp.h>
+#endif
 
 
 using namespace std;
@@ -42,11 +45,15 @@ static constexpr auto LOG_TAG = "TcpStream";
 
 TcpStream::TcpStream(PcmStream::Listener* pcmListener, boost::asio::io_context& ioc, const ServerSettings& server_settings, const StreamUri& uri,
                      PcmStream::Source source)
-    : AsioStream<tcp::socket>(pcmListener, ioc, server_settings, uri, source), reconnect_timer_(ioc)
+    : AsioStream<tcp::socket>(pcmListener, ioc, server_settings, uri, source), reconnect_timer_(strand_)
 {
     static constexpr uint16_t DEFAULT_PORT = 4953;
     host_ = uri_.host;
     port_ = uri_.port.value_or(DEFAULT_PORT);
+
+    keepalive_idle_ = cpt::stoi(uri_.getQuery("keepalive", "20"));
+    if (keepalive_idle_ < 0)
+        throw SnapException("keepalive must be non-negative (seconds)");
 
     auto mode = uri_.getQuery("mode", "server");
     if (mode == "server")
@@ -78,17 +85,26 @@ void TcpStream::connect()
     {
         stream_ = make_unique<tcp::socket>(strand_);
         boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::make_address(host_), port_);
-        stream_->async_connect(endpoint, [this, self = shared_from_this()](const boost::system::error_code& ec)
+        auto stream = stream_;
+        const auto generation = generation_;
+        stream->async_connect(endpoint, [this, self = shared_from_this(), stream, generation](const boost::system::error_code& ec)
         {
+            if (!active_ || generation != generation_)
+                return;
             if (!ec)
             {
+                configure_socket(*stream_);
                 LOG(DEBUG, LOG_TAG) << "Connected\n";
                 on_connect();
             }
             else
             {
                 LOG(DEBUG, LOG_TAG) << "Connect failed: " << ec.message() << "\n";
-                wait(reconnect_timer_, 1s, [this, self = shared_from_this()] { connect(); });
+                wait(reconnect_timer_, 1s, [this, self = shared_from_this(), generation]
+                {
+                    if (active_ && generation == generation_)
+                        connect();
+                });
             }
         });
     }
@@ -106,17 +122,20 @@ void TcpStream::disconnect()
 
 void TcpStream::start_accept()
 {
+    if (!active_ || accepting_)
+        return;
     accepting_ = true;
     acceptor_->async_accept([this, self = shared_from_this()](boost::system::error_code ec, tcp::socket socket)
     {
         accepting_ = false;
+        if (!active_)
+            return;
         if (!ec)
         {
-            boost::system::error_code ec;
-            socket.set_option(boost::asio::socket_base::keep_alive(true), ec);
-            socket.set_option(tcp::no_delay(true), ec);
+            configure_socket(socket);
 
             LOG(NOTICE, LOG_TAG) << "New client connection: " << socket.remote_endpoint().address().to_string() << "\n";
+            AsioStream<tcp::socket>::disconnect();
             stream_ = make_unique<tcp::socket>(std::move(socket));
             on_connect();
             start_accept();
@@ -131,6 +150,32 @@ void TcpStream::start_accept()
             }
         }
     });
+}
+
+
+void TcpStream::configure_socket(tcp::socket& socket)
+{
+    boost::system::error_code ec;
+    socket.set_option(boost::asio::socket_base::keep_alive(keepalive_idle_ > 0), ec);
+    if (ec)
+        LOG(WARNING, LOG_TAG) << "Could not configure TCP keepalive: " << ec.message() << "\n";
+#if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+    if (!ec && keepalive_idle_ > 0)
+    {
+        auto set_option = [&socket](int option, int value)
+        {
+            if (::setsockopt(socket.native_handle(), IPPROTO_TCP, option, &value, sizeof(value)) != 0)
+                LOG(WARNING, LOG_TAG) << "Could not configure TCP keepalive option " << option << "\n";
+        };
+#ifdef __APPLE__
+        set_option(TCP_KEEPALIVE, keepalive_idle_);
+#else
+        set_option(TCP_KEEPIDLE, keepalive_idle_);
+#endif
+        set_option(TCP_KEEPINTVL, 5);
+        set_option(TCP_KEEPCNT, 3);
+    }
+#endif
 }
 
 
