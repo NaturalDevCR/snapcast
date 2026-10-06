@@ -8,6 +8,19 @@ concurrency:
   group: beta-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y cmake g++ pkg-config libboost-dev libasound2-dev libsoxr-dev libflac-dev libvorbis-dev libopus-dev libexpat1-dev libssl-dev
+      - name: Build and test
+        run: |
+          cmake -S . -B build -DBUILD_TESTS=ON -DBUILD_WITH_AVAHI=OFF -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build --parallel 2
+          ./bin/snapcast_test
+          ./bin/tcp_stream_test
+          ./bin/alsa_player_test
   build:
     strategy:
       fail-fast: false
@@ -44,7 +57,7 @@ jobs:
           path: out/*.deb
           if-no-files-found: error
   publish:
-    needs: build
+    needs: [build, verify]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
