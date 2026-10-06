@@ -1,0 +1,68 @@
+name: Personal beta
+on:
+  push:
+    tags: ['v*-naturaldevcr.beta.*']
+permissions:
+  contents: read
+concurrency:
+  group: beta-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [bookworm, trixie]
+        arch: [amd64, arm64, armhf]
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+          - arch: armhf
+            runner: ubuntu-24.04-arm
+            platform: linux/arm/v7
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+        if: matrix.arch == 'armhf'
+        with:
+          platforms: arm
+      - name: Build packages
+        env:
+          BETA_TAG: ${{ github.ref_name }}
+          DISTRO: ${{ matrix.distro }}
+          PLATFORM: ${{ matrix.platform }}
+        run: docker run --rm --platform "$PLATFORM" -e BETA_TAG -e DISTRO -v "$PWD:/src" -w /src "debian:$DISTRO" bash scripts/build-beta-debs.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debs-${{ matrix.arch }}-${{ matrix.distro }}
+          path: out/*.deb
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BETA_TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          (cd out && sha256sum *.deb > SHA256SUMS)
+          cat > notes.md <<'NOTES'
+          Snapcast beta with TCP source recovery (#1481), UDP/RTP input (#1502), and ALSA stream recovery (#1556).
+
+          Debian Bookworm and Trixie packages for amd64, arm64 and armhf. Snapclient includes ALSA and PulseAudio support. SHA256SUMS contains package checksums.
+          NOTES
+          gh release create "$BETA_TAG" out/*.deb out/SHA256SUMS --repo "$REPOSITORY" --verify-tag --prerelease --title "Snapcast $BETA_TAG (NaturalDevCR beta)" --notes-file notes.md
