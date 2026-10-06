@@ -6,7 +6,7 @@ set -euo pipefail
 [[ "$DISTRO" == bookworm || "$DISTRO" == trixie ]] || exit 2
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y --no-install-recommends build-essential cmake pkg-config git fakeroot debhelper python3 unzip wget libboost-dev libasound2-dev libsoxr-dev libvorbis-dev libflac-dev libopus-dev libavahi-client-dev libexpat1-dev libssl-dev libpulse-dev libasio-dev
+apt-get install -y --no-install-recommends ca-certificates build-essential cmake pkg-config git fakeroot debhelper python3 unzip wget libboost-dev libasound2-dev libsoxr-dev libvorbis-dev libflac-dev libopus-dev libavahi-client-dev libexpat1-dev libssl-dev libpulse-dev libasio-dev
 ln -s extras/package/debian debian
 version="${BETA_TAG#v}"
 version="${version/-/~}-1"

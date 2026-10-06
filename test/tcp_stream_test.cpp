@@ -157,8 +157,9 @@ TEST_CASE("Stopping TCP cancels acceptance and pending handlers", "[tcp]")
     f.pump(40ms);
     REQUIRE(f.listener.chunks.empty());
     f.pump(150ms);
-    // Fixture and the encoder callback retain the source; no I/O handler should.
-    REQUIRE(f.source.use_count() == 2);
+    // Encoder ownership varies by version; only test pending I/O ownership.
+    f.source->releaseEncoder();
+    REQUIRE(f.source.use_count() == 1);
 }
 
 TEST_CASE("TCP keepalive is configurable in both modes", "[tcp]")
