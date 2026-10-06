@@ -1,6 +1,6 @@
 # NaturalDevCR beta packages
 
-The `codex/personal-beta` branch combines TCP recovery (#1481), UDP/RTP sources
+The `personal-beta` branch combines TCP recovery (#1481), UDP/RTP sources
 (#1502), and ALSA stream recovery (#1556). It is maintained separately from the
 upstream pull requests.
 
