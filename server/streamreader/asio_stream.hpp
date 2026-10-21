@@ -88,6 +88,7 @@ protected:
     std::shared_ptr<ReadStream> stream_;
     /// Invalidates callbacks belonging to an earlier connection.
     uint64_t generation_{0};
+    /// Buffer owned by the current connection's asynchronous reads.
     std::shared_ptr<std::vector<char>> read_buffer_;
 
     /// duration of the current silence period
