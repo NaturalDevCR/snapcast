@@ -24,6 +24,8 @@ fakeroot make -f debian/rules CMAKEFLAGS="-DCMAKE_BUILD_TYPE=Release -DREVISION=
 mkdir -p out
 for file in ../snapclient_*.deb ../snapserver_*.deb; do
   name="$(basename "$file" .deb)"
+  # Match GitHub's asset filename normalization so SHA256SUMS stays usable.
+  name="${name//~/.}"
   cp "$file" "out/${name}_${DISTRO}.deb"
 done
 (cd out && sha256sum *.deb > SHA256SUMS)
