@@ -40,6 +40,7 @@
 #include "pipe_stream.hpp"
 #include "process_stream.hpp"
 #include "tcp_stream.hpp"
+#include "udp_stream.hpp"
 
 // 3rd party headers
 
@@ -140,6 +141,10 @@ PcmStreamPtr StreamManager::addStream(StreamUri& streamUri, PcmStream::Source so
     {
         stream = make_shared<TcpStream>(listener, io_context_, settings_, streamUri, source);
     }
+    else if (streamUri.scheme == "udp")
+    {
+        stream = make_shared<UdpStream>(listener, io_context_, settings_, streamUri, source);
+    }
 #ifdef HAS_PIPEWIRE
     else if (streamUri.scheme == "pipewire")
     {
@@ -176,7 +181,7 @@ bool StreamManager::removeStream(const std::string& name)
     {
         (*iter)->stop();
         streams_.erase(iter);
-        LOG(DEBUG, LOG_TAG) << "Found and removed stream '" << (*iter)->getName() << "'\n";
+        LOG(DEBUG, LOG_TAG) << "Found and removed stream '" << name << "'\n";
         return true;
     }
     else

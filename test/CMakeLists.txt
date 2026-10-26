@@ -38,3 +38,42 @@ endif(ANDROID)
 
 target_link_libraries(snapcast_test OpenSSL::Crypto OpenSSL::SSL)
 target_link_libraries(snapcast_test Catch2::Catch2WithMain Catch2::Catch2)
+
+# Exercise the actual TCP source lifecycle with loopback sockets.
+if(BUILD_SERVER AND NOT ANDROID)
+  get_target_property(TCP_TEST_LIBRARIES snapserver LINK_LIBRARIES)
+  get_target_property(TCP_TEST_LINK_DIRS snapserver LINK_DIRECTORIES)
+  get_target_property(TCP_TEST_INCLUDES snapserver INCLUDE_DIRECTORIES)
+  get_target_property(TCP_TEST_SERVER_SOURCES snapserver SOURCES)
+  set(TCP_TEST_SOURCES tcp_stream_test.cpp)
+  foreach(source IN LISTS TCP_TEST_SERVER_SOURCES)
+    if(source MATCHES "^encoder/" OR
+       source MATCHES "^streamreader/(tcp_stream|pcm_stream|stream_control|control_error|properties|metadata)\\.cpp$")
+      list(APPEND TCP_TEST_SOURCES "${CMAKE_SOURCE_DIR}/server/${source}")
+    endif()
+  endforeach()
+  add_executable(tcp_stream_test ${TCP_TEST_SOURCES})
+  target_include_directories(tcp_stream_test PRIVATE ${TCP_TEST_INCLUDES})
+  if(TCP_TEST_LINK_DIRS)
+    target_link_directories(tcp_stream_test PRIVATE ${TCP_TEST_LINK_DIRS})
+  endif()
+  target_link_libraries(tcp_stream_test PRIVATE ${TCP_TEST_LIBRARIES} Catch2::Catch2WithMain)
+endif()
+
+# GNU linker wrappers inject ALSA errors around the real null PCM device.
+if(BUILD_CLIENT AND ALSA_FOUND AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  add_executable(alsa_player_test alsa_player_test.cpp
+    ${CMAKE_SOURCE_DIR}/client/player/alsa_player.cpp
+    ${CMAKE_SOURCE_DIR}/client/player/player.cpp
+    ${CMAKE_SOURCE_DIR}/client/stream.cpp
+    ${CMAKE_SOURCE_DIR}/client/time_provider.cpp)
+  target_include_directories(alsa_player_test PRIVATE ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/client ${ALSA_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
+  target_link_libraries(alsa_player_test PRIVATE common ${ALSA_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT} ${ATOMIC_LIBRARY} Catch2::Catch2WithMain)
+  target_link_options(alsa_player_test PRIVATE
+    -Wl,--wrap=snd_pcm_open -Wl,--wrap=snd_pcm_close
+    -Wl,--wrap=snd_pcm_prepare -Wl,--wrap=snd_pcm_wait
+    -Wl,--wrap=snd_pcm_writei -Wl,--wrap=snd_pcm_hw_params
+    -Wl,--wrap=snd_pcm_hw_params_set_format)
+endif()
