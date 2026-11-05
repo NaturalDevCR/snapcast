@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  BOOST_VERSION: 1_90_0
+  BOOST_VERSION: 1_92_0
 
 jobs:
   static-analysis:
@@ -17,10 +17,10 @@ jobs:
           - cppcheck
           - clang-tidy
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: print environment
         run: env
       - name: dependencies
@@ -32,21 +32,22 @@ jobs:
           libpipewire-0.3-dev
       - name: cache boost
         id: cache-boost
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
-          path: boost_${{ env.BOOST_VERSION }}
+          path: $RUNNER_TEMP/boost_${{ env.BOOST_VERSION }}
           key: boost-${{ env.BOOST_VERSION }}
           enableCrossOsArchive: true
       - name: get boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
+          cd $RUNNER_TEMP
           wget https://archives.boost.io/release/${BOOST_VERSION//_/.}/source/boost_${BOOST_VERSION}.tar.bz2
           tar xjf boost_${BOOST_VERSION}.tar.bz2
       - name: configure
         run: |
           cmake -S . -B build \
             -DWERROR=ON -DBUILD_TESTS=OFF \
-            -DBOOST_ROOT=boost_${BOOST_VERSION} \
+            -DBOOST_ROOT=$RUNNER_TEMP/boost_${BOOST_VERSION} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE \
             -DBUILD_WITH_PIPEWIRE=ON \
@@ -69,10 +70,10 @@ jobs:
     strategy:
       fail-fast: false
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: print environment
         run: env
       - name: dependencies
@@ -108,10 +109,10 @@ jobs:
           - sanitizer: tsan
             param: "TSAN=ON"
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: print environment
         run: env
       - name: dependencies
@@ -119,23 +120,24 @@ jobs:
           sudo apt-get update && \
           sudo apt-get install -yq libasound2-dev libsoxr-dev libvorbisidec-dev libvorbis-dev libflac-dev \
           libopus-dev alsa-utils libpulse-dev libavahi-client-dev libssl-dev \
-          avahi-daemon ccache expat catch2 \
+          avahi-daemon ccache expat \
           libpipewire-0.3-dev
       - name: cache boost
         id: cache-boost
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
-          path: boost_${{ env.BOOST_VERSION }}
+          path: $RUNNER_TEMP/boost_${{ env.BOOST_VERSION }}
           key: boost-${{ env.BOOST_VERSION }}
           enableCrossOsArchive: true
       - name: get boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
+          cd $RUNNER_TEMP
           wget https://archives.boost.io/release/${BOOST_VERSION//_/.}/source/boost_${BOOST_VERSION}.tar.bz2
           tar xjf boost_${BOOST_VERSION}.tar.bz2
       - name: cache ccache
         id: cache-ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           # TODO: use environment variable $HOME/.ccache
           path: /home/runner/.ccache
@@ -147,7 +149,7 @@ jobs:
             -DWERROR=OFF \
             -DBUILD_TESTS=ON \
             -D${{ matrix.param }} \
-            -DBOOST_ROOT=boost_${BOOST_VERSION} \
+            -DBOOST_ROOT=$RUNNER_TEMP/boost_${BOOST_VERSION} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE \
@@ -166,6 +168,11 @@ jobs:
           # This regression checks invalid accesses, not existing shutdown leaks.
           ASAN_OPTIONS: detect_leaks=0
         run: python3 test/stream_removal_test.py ./bin/snapserver
+      - name: TCP control lifecycle regression (ASan)
+        if: matrix.sanitizer == 'asan'
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: python3 test/control_session_test.py ./bin/snapserver
 
 
   linux:
@@ -180,11 +187,15 @@ jobs:
           - clang-16
           - clang-17
           - clang-18
+          - clang-20
+          - clang-21
+          - clang-22
           - gcc-10
           - gcc-11
           - gcc-12
           - gcc-13
           - gcc-14
+          - gcc-15
         build_type:
           - Debug
           - Release
@@ -213,6 +224,18 @@ jobs:
             cc: clang-18
             cxx: clang++-18
             os: ubuntu-24.04
+          - compiler: clang-20
+            cc: clang-20
+            cxx: clang++-20
+            os: ubuntu-26.04
+          - compiler: clang-21
+            cc: clang-21
+            cxx: clang++-21
+            os: ubuntu-26.04
+          - compiler: clang-22
+            cc: clang-22
+            cxx: clang++-22
+            os: ubuntu-26.04
           - compiler: gcc-10
             cc: gcc-10
             cxx: g++-10
@@ -228,16 +251,20 @@ jobs:
           - compiler: gcc-13
             cc: gcc-13
             cxx: g++-13
-            os: ubuntu-24.04
+            os: ubuntu-26.04
           - compiler: gcc-14
             cc: gcc-14
             cxx: g++-14
-            os: ubuntu-24.04
+            os: ubuntu-26.04
+          - compiler: gcc-15
+            cc: gcc-15
+            cxx: g++-15
+            os: ubuntu-26.04
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: print environment
         run: env
       - name: dependencies
@@ -249,19 +276,20 @@ jobs:
           libpipewire-0.3-dev
       - name: cache boost
         id: cache-boost
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
-          path: boost_${{ env.BOOST_VERSION }}
+          path: $RUNNER_TEMP/boost_${{ env.BOOST_VERSION }}
           key: boost-${{ env.BOOST_VERSION }}
           enableCrossOsArchive: true
       - name: get boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
+          cd $RUNNER_TEMP
           wget https://archives.boost.io/release/${BOOST_VERSION//_/.}/source/boost_${BOOST_VERSION}.tar.bz2
           tar xjf boost_${BOOST_VERSION}.tar.bz2
       - name: cache ccache
         id: cache-ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           # TODO: use environment variable $HOME/.ccache
           path: /home/runner/.ccache
@@ -273,7 +301,7 @@ jobs:
         run: |
           cmake -S . -B build \
             -DWERROR=ON -DBUILD_TESTS=ON \
-            -DBOOST_ROOT=boost_${BOOST_VERSION} \
+            -DBOOST_ROOT=$RUNNER_TEMP/boost_${BOOST_VERSION} \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE \
@@ -310,6 +338,11 @@ jobs:
           - "16.4"
           - "26.0"
           - "26.1"
+          - "26.2"
+          - "26.3"
+          - "26.4"
+          - "26.5"
+          - "26.6"
         build_type:
           - Debug
           - Release
@@ -335,20 +368,30 @@ jobs:
           - xcode: "16.4"
             os: macos-15
           - xcode: "26.0"
-            os: macos-15
+            os: macos-26
           - xcode: "26.1"
-            os: macos-15
+            os: macos-26
+          - xcode: "26.2"
+            os: macos-26
+          - xcode: "26.3"
+            os: macos-26
+          - xcode: "26.4"
+            os: macos-26
+          - xcode: "26.5"
+            os: macos-26
+          - xcode: "26.6"
+            os: macos-26
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: print environment
         run: env
       - name: dependencies
         run: |
           brew update-if-needed
-          brew install libsoxr flac libvorbis opus catch2 boost
+          brew install libsoxr flac libvorbis opus boost
       - name: configure
         run: |
           cmake -S . -B build \
@@ -383,10 +426,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: cache dependencies
         id: cache-dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           #path: ${VCPKG_INSTALLATION_ROOT}\installed
           path: c:\vcpkg\installed
@@ -398,7 +441,7 @@ jobs:
           cd c:\vcpkg
           git pull
           vcpkg.exe update
-          vcpkg.exe --triplet x64-windows install libflac libvorbis soxr opus openssl boost-asio boost-beast catch2
+          vcpkg.exe --triplet x64-windows install libflac libvorbis soxr opus openssl boost-asio boost-beast
       - name: configure
         run: |
           echo vcpkg installation root: ${env:VCPKG_INSTALLATION_ROOT}

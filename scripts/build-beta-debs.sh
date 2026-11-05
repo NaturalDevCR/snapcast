@@ -14,7 +14,7 @@ dpkg --validate-version "$version"
 cat > debian/changelog <<CHANGELOG
 snapcast ($version) unstable; urgency=medium
 
-  * NaturalDevCR beta: TCP recovery, UDP/RTP sources, ALSA recovery and stream removal crash fix.
+  * NaturalDevCR beta: official develop reconciliation, control peer diagnostics, TCP/ALSA recovery and UDP/RTP sources.
 
  -- NaturalDevCR <snapcast-beta@users.noreply.github.com>  $(date -R)
 CHANGELOG
@@ -25,7 +25,7 @@ mkdir -p out
 for file in ../snapclient_*.deb ../snapserver_*.deb; do
   name="$(basename "$file" .deb)"
   # Match GitHub's asset filename normalization so SHA256SUMS stays usable.
-  name="${name//~/.}"
+  name="${name//\~/.}"
   cp "$file" "out/${name}_${DISTRO}.deb"
 done
 (cd out && sha256sum *.deb > SHA256SUMS)

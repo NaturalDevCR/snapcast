@@ -38,6 +38,7 @@ jobs:
           ./bin/tcp_stream_test
           ./bin/alsa_player_test
           python3 test/stream_removal_test.py ./bin/snapserver
+          python3 test/control_session_test.py ./bin/snapserver
   build:
     strategy:
       fail-fast: false
@@ -79,7 +80,7 @@ jobs:
         run: |
           (cd out && sha256sum *.deb > SHA256SUMS)
           cat > notes.md <<'NOTES'
-          Snapcast beta with TCP source recovery (#1481), UDP/RTP input (#1502), ALSA stream recovery (#1556), and the stream removal crash fix (#1560).
+          Snapcast beta reconciled with official develop through ea981ec5, with TCP control peer diagnostics (#1567), TCP source recovery (#1481), UDP/RTP input (#1502), ALSA stream recovery (#1556), and the stream removal crash fix (#1560).
 
           Debian Bookworm and Trixie packages for the architectures selected in this build. Snapclient includes ALSA and PulseAudio support. SHA256SUMS contains package checksums.
           NOTES

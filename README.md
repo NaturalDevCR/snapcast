@@ -17,7 +17,11 @@ Snapcast is a multiroom client-server audio player, where all clients are time s
 Audio is captured by the server and routed to the connected clients. Several players can feed audio to the server in parallel and clients can be grouped to play the same audio stream.  
 One of the most generic ways to use Snapcast is in conjunction with the music player daemon ([MPD](http://www.musicpd.org/)) or [Mopidy](https://www.mopidy.com/).
 
-![Overview](doc/Overview.png)
+<picture>
+ <source media="(prefers-color-scheme: dark)" srcset="doc/Overview_dark.png">
+ <source media="(prefers-color-scheme: light)" srcset="doc/Overview.png">
+ <img alt="Snapcast" src="doc/Overview.png">
+</picture>
 
 ## How does it work
 
@@ -115,16 +119,17 @@ The client will use as audio backend the system's low level audio API to have th
 
 Available audio backends are configured using the `--player` command line parameter:
 
-| Backend   | OS      | Description                                            | Parameters                                                                                                                                                                                                                            |
-| --------- | ------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| alsa      | Linux   | ALSA                                                   | `buffer_time=<total buffer size [ms]>` (default 80, min 10)<br>`fragments=<number of buffers>` (default 4, min 2)                                                                                                                     |
-| pulse     | Linux   | PulseAudio                                             | `buffer_time=<buffer size [ms]>` (default 100, min 10)<br>`server=<PulseAudio server>` - default not-set: use the default server<br>`property=<key>=<value>` set PA property, can be used multiple times (default `media.role=music`) |
-| oboe      | Android | Oboe, using OpenSL ES on Android 4.1 and AAudio on 8.1 |                                                                                                                                                                                                                                       |
-| opensl    | Android | OpenSL ES                                              |                                                                                                                                                                                                                                       |
-| coreaudio | macOS   | Core Audio                                             |                                                                                                                                                                                                                                       |
-| wasapi    | Windows | Windows Audio Session API                              |                                                                                                                                                                                                                                       |
-| sld2      | All     | SDL2 Audio (e.g. for LG webOS TVs)                     |                                                                                                                                                                                                                                       |
-| file      | All     | Write audio to file                                    | `filename=<filename>` (`<filename>` = `stdout`, `stderr`, `null` or a filename)<br>`mode=[w\|a]` (`w`: write (discarding the content), `a`: append (keeping the content)                                                              |
+| Backend   | OS      | Description  | Parameters |
+| --------- | ------- | ------------ | ---------- |
+| alsa      | Linux   | ALSA | `buffer_time=<total buffer size [ms]>` (default 80, min 10)<br>`fragments=<number of buffers>` (default 4, min 2) |
+| pulse     | Linux   | PulseAudio | `buffer_time=<buffer size [ms]>` (default 100, min 10)<br>`server=<PulseAudio server>` - default not-set: use the default server<br>`property=<key>=<value>` set PA property, can be used multiple times (default `media.role=music`)  |
+| oboe      | Android | Oboe, using OpenSL ES on Android 4.1 and AAudio on 8.1 | |
+| opensl    | Android | OpenSL ES | |
+| coreaudio | macOS   | Core Audio | |
+| wasapi    | Windows | Windows Audio Session API | |
+| sdl2      | All     | SDL2 Audio (fallback, assumes constant latency) | |
+| file      | All     | Write audio to file | `filename=<filename>` (`<filename>` = `stdout`, `stderr`, `null` or a filename)<br>`mode=[w\|a]` (`w`: write (discarding the content), `a`: append (keeping the content) |
+
 
 Parameters are appended to the player name, e.g. `--player alsa:buffer_time=100`. Use `--player <name>:?` to get a list of available options.  
 For some audio backends you can configure the PCM device using the `-s` or `--soundcard` parameter, the device is chosen by index or name. Available PCM devices can be listed with `-l` or `--list`  
@@ -248,3 +253,14 @@ Unordered list of features that should make it into the v1.0
 - [x] **Ports** Snapclient for Windows, Mac OS X,...
 - [ ] **JSON-RPC** Possibility to add, remove, rename streams
 - [ ] **Protocol specification** Snapcast binary streaming protocol, JSON-RPC protocol
+
+
+### Beta 6 reconciliation
+
+The next personal beta incorporates official `develop` through `ea981ec5`
+(2026-11-05), including the merged stream-removal crash fix, the explicit SOXR
+build option, updated SDL2 portability, librespot artist metadata, and upstream
+build/dependency updates. TCP source recovery, UDP/RTP input, and ALSA recovery
+remain included. TCP control logs identify both endpoints and distinguish orderly
+closures from unexpected I/O errors. The beta gate runs the real TCP control and
+announcement stream-removal integration tests in addition to the C++ suites.
