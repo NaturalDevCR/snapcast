@@ -14,7 +14,7 @@ dpkg --validate-version "$version"
 cat > debian/changelog <<CHANGELOG
 snapcast ($version) unstable; urgency=medium
 
-  * NaturalDevCR beta: TCP recovery, UDP/RTP sources, ALSA recovery and stream removal crash fix.
+  * NaturalDevCR beta: official develop reconciliation, control peer diagnostics, TCP/ALSA recovery and UDP/RTP sources.
 
  -- NaturalDevCR <snapcast-beta@users.noreply.github.com>  $(date -R)
 CHANGELOG

@@ -253,3 +253,14 @@ Unordered list of features that should make it into the v1.0
 - [x] **Ports** Snapclient for Windows, Mac OS X,...
 - [ ] **JSON-RPC** Possibility to add, remove, rename streams
 - [ ] **Protocol specification** Snapcast binary streaming protocol, JSON-RPC protocol
+
+
+### Beta 6 reconciliation
+
+The next personal beta incorporates official `develop` through `ea981ec5`
+(2026-11-05), including the merged stream-removal crash fix, the explicit SOXR
+build option, updated SDL2 portability, librespot artist metadata, and upstream
+build/dependency updates. TCP source recovery, UDP/RTP input, and ALSA recovery
+remain included. TCP control logs identify both endpoints and distinguish orderly
+closures from unexpected I/O errors. The beta gate runs the real TCP control and
+announcement stream-removal integration tests in addition to the C++ suites.
