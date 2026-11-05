@@ -1,5 +1,34 @@
 # Snapcast changelog
 
+## Version 0.36.0
+
+### Features
+
+### Bugfixes
+
+- Fix crash when removing the last stream (Issue #1559, PR #1560)
+
+### General
+
+- Add snapserver support for OpenBSD (PR #1549)
+- Add `SECURITY.md` for vulnerability reporting (Issue #1561)
+- Update Github actions (PR #1534, #1536)
+- CI: add more compilers
+- CI: remove armhf package builds (unsupported by Github)
+- CI: remove Debian Bullseye from package builds
+- Update SDL2 documentation (PR #1562)
+- CMake: add an explicit `BUILD_WITH_SOXR` option (PR #1543)
+
+### Contributors
+
+- @badaix
+- @rwsalie
+- @malkstar
+- @mirko
+- @NaturalDevCR
+
+_Johannes Pohl <snapcast@badaix.de>  Thu 31 Dec 2026 00:13:37 +0200_
+
 ## Version 0.35.0
 
 ### Features
@@ -32,8 +61,6 @@
 - @olorin
 
 _Johannes Pohl <snapcast@badaix.de>  Sun, 08 Mar 2026 00:13:37 +0200_
-
-# Snapcast changelog
 
 ## Version 0.34.0
 
